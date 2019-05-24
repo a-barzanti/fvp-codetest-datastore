@@ -1,52 +1,53 @@
 import {DynamoDB} from "aws-sdk";
-import { ITitle, ILaunchUrl, IImage, IImageType } from "../Datastore/IMdsTypes";
+import {ITitle, ILaunchUrl, IImage, IImageType} from "../Datastore/IMdsTypes";
 
-export interface ScheduleEvent {
-    program_id: string,
-    titles: ITitle[]
-    launchUrls: ILaunchUrl[]
-    images: IImage[]
-    startTime: string,
-    endTime: string
+export interface IScheduleEvent {
+    program_id: string;
+    titles: ITitle[];
+    launchUrls: ILaunchUrl[];
+    images: IImage[];
+    startTime: string;
+    endTime: string;
 }
 
 /**
  * This mapper is used to convert the AttibuteMap from the Dynamo query to the final object to be serialized.
- * Being a mapper it never fails, but relies on defaults instead, assuming that the data is reliable, if that is not
- * the case the misformed data should be filtered out either coming from the database or with a filter function in the lambda
+ * Being a mapper it never fails, but relies on defaults instead, assuming that the data is reliable,
+ * if that is not the case the misformed data should be filtered out either coming from the database
+ * or with a filter function in the lambda
  */
-export const mapScheduleEvents = function (dynamoItem:DynamoDB.AttributeMap): ScheduleEvent {
-    let databaseEntry = DynamoDB.Converter.unmarshall(dynamoItem);
-    let program_id:string = "";
+export const mapScheduleEvents: (dynamoItem: DynamoDB.AttributeMap) => IScheduleEvent = (dynamoItem) => {
+    const databaseEntry = DynamoDB.Converter.unmarshall(dynamoItem);
+    let programId: string = "";
     if (databaseEntry.crids && databaseEntry.crids.TVA) {
-        program_id = databaseEntry.crids.TVA;
+        programId = databaseEntry.crids.TVA;
     }
-    let titles:ITitle[] = [];
-    if (typeof databaseEntry.titles === 'object') {
+    let titles: ITitle[] = [];
+    if (typeof databaseEntry.titles === "object") {
         titles = Object.values(databaseEntry.titles);
     }
-    let launchUrls:ILaunchUrl[] = [];
+    const launchUrls: ILaunchUrl[] = [];
     if (databaseEntry.gsi1pk) {
-        //TODO: It's unclear what the content type is supposed to be, verify
+        // TODO: It's unclear what the content type is supposed to be, verify
         launchUrls.push({
             href: databaseEntry.gsi1pk,
-            contentType: ""
+            contentType: "",
         });
     }
-    let images:IImage[] = [];
+    const images: IImage[] = [];
     if (databaseEntry.gsi2sk) {
         images.push({
             type: IImageType.Default,
-            key: databaseEntry.gsi2sk
+            key: databaseEntry.gsi2sk,
         });
-    } 
-    let startTime:string = "";
+    }
+    let startTime: string = "";
     if (databaseEntry.startTime && +databaseEntry.startTime > 0) {
-        startTime = new Date(Number(databaseEntry.startTime)*1000).toISOString();
+        startTime = new Date(Number(databaseEntry.startTime) * 1000).toISOString();
     }
-    let endTime:string = "";
+    let endTime: string = "";
     if (databaseEntry.endTime && +databaseEntry.endTime > 0) {
-        endTime = new Date(Number(databaseEntry.startTime)*1000).toISOString();
+        endTime = new Date(Number(databaseEntry.startTime) * 1000).toISOString();
     }
-    return { program_id, titles, launchUrls, images, startTime, endTime}
-}
+    return { program_id: programId, titles, launchUrls, images, startTime, endTime};
+};
